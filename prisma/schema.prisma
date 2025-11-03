@@ -1,0 +1,55 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Resource {
+  id       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name     String
+  bookings Booking[]
+
+  @@map("resources")
+}
+
+model Booking {
+  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  resourceId     String          @map("resource_id")
+  startTime      DateTime        @map("start_time") @db.Timestamptz(6)
+  endTime        DateTime        @map("end_time") @db.Timestamptz(6)
+  metadata       Json?           @db.JsonB
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  resource       Resource        @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  recurrenceRule RecurrenceRule?
+  exceptions     Exception[]
+
+  @@index([resourceId, startTime, endTime])
+  @@map("bookings")
+}
+
+model RecurrenceRule {
+  bookingId  String  @id @map("booking_id") @db.Uuid
+  rrule      String
+  isInfinite Boolean @map("is_infinite")
+  booking    Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@map("recurrence_rules")
+}
+
+model Exception {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bookingId    String    @map("booking_id") @db.Uuid
+  exceptDate   DateTime  @map("except_date") @db.Date
+  replaceStart DateTime? @map("replace_start") @db.Timestamptz(6)
+  replaceEnd   DateTime? @map("replace_end") @db.Timestamptz(6)
+  booking      Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId, exceptDate])
+  @@map("exceptions")
+}

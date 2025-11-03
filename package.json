@@ -1,14 +1,18 @@
 {
-  "name": "recurring-meetings-api",
+  "name": "book-meetings",
   "version": "1.0.0",
-  "description": "TypeScript Express API for recurring meetings with Postgres",
+  "description": "APIs for booking single or recurring appointments (including infinite recurrence) for a resource",
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "test": "jest",
-    "lint": "eslint src/**/*.ts tests/**/*.ts"
+    "lint": "eslint src/**/*.ts tests/**/*.ts",
+    "db:generate": "prisma generate",
+    "db:migrate": "ts-node scripts/init-db.ts",
+    "db:seed": "ts-node scripts/seed.ts",
+    "db:studio": "prisma studio"
   },
   "keywords": [
     "typescript",
@@ -16,12 +20,17 @@
     "postgres",
     "api"
   ],
-  "author": "",
+  "author": "Nayan Lakhwani",
+  "repository": {
+    "url": "https://github.com/LordNayan/book-meetings"
+  },
   "license": "MIT",
   "dependencies": {
+    "@prisma/client": "^5.6.0",
     "dayjs": "^1.11.10",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
+    "pg": "^8.11.3",
     "pino": "^8.16.2",
     "zod": "^3.22.4"
   },
@@ -29,15 +38,19 @@
     "@types/express": "^4.17.21",
     "@types/jest": "^29.5.8",
     "@types/node": "^20.9.0",
+    "@types/pg": "^8.10.9",
     "@types/supertest": "^2.0.16",
     "@typescript-eslint/eslint-plugin": "^6.11.0",
     "@typescript-eslint/parser": "^6.11.0",
     "eslint": "^8.53.0",
     "jest": "^29.7.0",
     "pino-pretty": "^10.2.3",
+    "prisma": "^5.6.0",
     "supertest": "^6.3.3",
     "ts-jest": "^29.1.1",
+    "ts-node": "^10.9.1",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.2.2"
+    "typescript": "^5.2.2",
+    "uuid": "^13.0.0"
   }
 }
