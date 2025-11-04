@@ -13,3 +13,10 @@ export interface ErrorResponse {
 // Extend Express Request/Response types if needed
 export type TypedRequest<T = unknown> = Request<unknown, unknown, T>;
 export type TypedResponse<T = unknown> = Response<T>;
+
+// Core booking types
+export interface BookingException {
+  exceptDate: Date;
+  replaceStart?: Date;
+  replaceEnd?: Date;
+}
