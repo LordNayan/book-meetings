@@ -20,3 +20,15 @@ export interface BookingException {
   replaceStart?: Date;
   replaceEnd?: Date;
 }
+
+export interface BookingInstance {
+  bookingId: string;
+  start: Date;
+  end: Date;
+  isRecurring?: boolean;
+}
+
+export interface ConflictInfo {
+  hasConflict: boolean;
+  conflicts: BookingInstance[];
+}
