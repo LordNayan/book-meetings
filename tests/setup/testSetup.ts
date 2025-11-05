@@ -24,11 +24,5 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-// Clean up data after each test to ensure test isolation
-afterEach(async () => {
-  // Delete in correct order due to foreign key constraints
-  await prisma.exception.deleteMany({});
-  await prisma.recurrenceRule.deleteMany({});
-  await prisma.booking.deleteMany({});
-  await prisma.resource.deleteMany({});
-});
+// Note: Individual test files handle their own cleanup
+// to ensure proper test isolation and avoid conflicts

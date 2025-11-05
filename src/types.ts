@@ -32,3 +32,8 @@ export interface ConflictInfo {
   hasConflict: boolean;
   conflicts: BookingInstance[];
 }
+
+export interface TimeSlot {
+  start: Date;
+  end: Date;
+}

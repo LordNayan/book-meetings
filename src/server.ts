@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { config } from './config';
 import { logger } from './logger';
 import { HealthCheckResponse } from './types';
+import { availabilityRouter } from './api/availability';
 
 const app = express();
 
@@ -20,6 +21,9 @@ app.get('/health', (_req: Request, res: Response<HealthCheckResponse>) => {
   res.status(200).json({ status: 'ok' });
 });
 
+// API routes
+app.use('/availability', availabilityRouter);
+
 // 404 handler
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: 'Not Found', message: 'Route not found' });
@@ -34,8 +38,11 @@ app.use((err: Error, _req: Request, res: Response, _next: express.NextFunction) 
 // Start server
 const PORT = parseInt(config.port, 10);
 
-app.listen(PORT, () => {
-  logger.info({ port: PORT, env: config.nodeEnv }, 'Server started successfully');
-});
+// Only start the server if not in test mode or if explicitly running the server
+if (config.nodeEnv !== 'test') {
+  app.listen(PORT, () => {
+    logger.info({ port: PORT, env: config.nodeEnv }, 'Server started successfully');
+  });
+}
 
 export default app;
