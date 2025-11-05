@@ -1,7 +1,11 @@
 import { RRule, rrulestr } from 'rrule';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { BookingException } from '../types';
 import { logger } from '../logger';
+
+// Enable UTC plugin for consistent timezone handling
+dayjs.extend(utc);
 
 /**
  * Expands a recurrence rule into a list of booking instances within a time window,
@@ -25,7 +29,7 @@ export function expandOccurrences(
 ): Array<{ start: Date; end: Date }> {
   try {
     // Calculate duration from base booking
-    const duration = dayjs(baseEnd).diff(dayjs(baseStart), 'millisecond');
+    const duration = dayjs.utc(baseEnd).diff(dayjs.utc(baseStart), 'millisecond');
 
     // Parse the RRULE string and set the dtstart
     let rrule: RRule;
@@ -44,7 +48,7 @@ export function expandOccurrences(
     // Build exception map for efficient lookup
     const exceptionMap = new Map<string, BookingException>();
     for (const exc of exceptions) {
-      const dateKey = dayjs(exc.exceptDate).format('YYYY-MM-DD');
+      const dateKey = dayjs.utc(exc.exceptDate).format('YYYY-MM-DD');
       exceptionMap.set(dateKey, exc);
     }
 
@@ -52,7 +56,7 @@ export function expandOccurrences(
     const instances: Array<{ start: Date; end: Date }> = [];
 
     for (const occurrence of occurrences) {
-      const occurrenceDate = dayjs(occurrence).format('YYYY-MM-DD');
+      const occurrenceDate = dayjs.utc(occurrence).format('YYYY-MM-DD');
       const exception = exceptionMap.get(occurrenceDate);
 
       if (exception) {
@@ -68,7 +72,7 @@ export function expandOccurrences(
       } else {
         // Normal occurrence - calculate end time based on duration
         const start = occurrence;
-        const end = dayjs(start).add(duration, 'millisecond').toDate();
+        const end = dayjs.utc(start).add(duration, 'millisecond').toDate();
         instances.push({ start, end });
       }
     }

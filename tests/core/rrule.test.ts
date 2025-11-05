@@ -1,13 +1,17 @@
 import { expandOccurrences, validateRRule, describeRRule } from '../../src/core/rrule';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+
+// Enable UTC plugin for consistent timezone handling in tests
+dayjs.extend(utc);
 
 describe('RRule Module', () => {
   describe('expandOccurrences', () => {
     it('should expand a weekly recurrence rule', () => {
-      const baseStart = dayjs('2025-11-04T10:00:00Z').toDate();
-      const baseEnd = dayjs('2025-11-04T11:00:00Z').toDate();
-      const windowStart = dayjs('2025-11-01T00:00:00Z').toDate();
-      const windowEnd = dayjs('2025-12-01T00:00:00Z').toDate();
+      const baseStart = dayjs.utc('2025-11-04T10:00:00').toDate();
+      const baseEnd = dayjs.utc('2025-11-04T11:00:00').toDate();
+      const windowStart = dayjs.utc('2025-11-01T00:00:00').toDate();
+      const windowEnd = dayjs.utc('2025-12-01T00:00:00').toDate();
 
       const occurrences = expandOccurrences(
         'FREQ=WEEKLY;BYDAY=MO',
@@ -23,14 +27,14 @@ describe('RRule Module', () => {
     });
 
     it('should apply exceptions to skip occurrences', () => {
-      const baseStart = dayjs('2025-11-04T10:00:00Z').toDate();
-      const baseEnd = dayjs('2025-11-04T11:00:00Z').toDate();
-      const windowStart = dayjs('2025-11-01T00:00:00Z').toDate();
-      const windowEnd = dayjs('2025-12-01T00:00:00Z').toDate();
+      const baseStart = dayjs.utc('2025-11-04T10:00:00').toDate();
+      const baseEnd = dayjs.utc('2025-11-04T11:00:00').toDate();
+      const windowStart = dayjs.utc('2025-11-01T00:00:00').toDate();
+      const windowEnd = dayjs.utc('2025-12-01T00:00:00').toDate();
 
       const exceptions = [
         {
-          exceptDate: dayjs('2025-11-11').toDate(),
+          exceptDate: dayjs.utc('2025-11-11').toDate(),
         },
       ];
 
@@ -45,22 +49,22 @@ describe('RRule Module', () => {
 
       // Check that the exception date is not in the occurrences
       const hasExceptionDate = occurrences.some(
-        (occ) => dayjs(occ.start).format('YYYY-MM-DD') === '2025-11-11'
+        (occ) => dayjs.utc(occ.start).format('YYYY-MM-DD') === '2025-11-11'
       );
       expect(hasExceptionDate).toBe(false);
     });
 
     it('should apply exceptions to replace occurrences', () => {
-      const baseStart = dayjs('2025-11-04T10:00:00Z').toDate();
-      const baseEnd = dayjs('2025-11-04T11:00:00Z').toDate();
-      const windowStart = dayjs('2025-11-01T00:00:00Z').toDate();
-      const windowEnd = dayjs('2025-12-01T00:00:00Z').toDate();
+      const baseStart = dayjs.utc('2025-11-04T10:00:00').toDate();
+      const baseEnd = dayjs.utc('2025-11-04T11:00:00').toDate();
+      const windowStart = dayjs.utc('2025-11-01T00:00:00').toDate();
+      const windowEnd = dayjs.utc('2025-12-01T00:00:00').toDate();
 
       const exceptions = [
         {
-          exceptDate: dayjs('2025-11-10').toDate(),
-          replaceStart: dayjs('2025-11-10T14:00:00').toDate(),
-          replaceEnd: dayjs('2025-11-10T15:00:00').toDate(),
+          exceptDate: dayjs.utc('2025-11-10').toDate(),
+          replaceStart: dayjs.utc('2025-11-10T14:00:00').toDate(),
+          replaceEnd: dayjs.utc('2025-11-10T15:00:00').toDate(),
         },
       ];
 
@@ -75,10 +79,10 @@ describe('RRule Module', () => {
 
       // Check that replacement time exists
       const replacedOccurrence = occurrences.find(
-        (occ) => dayjs(occ.start).format('YYYY-MM-DD') === '2025-11-10'
+        (occ) => dayjs.utc(occ.start).format('YYYY-MM-DD') === '2025-11-10'
       );
       expect(replacedOccurrence).toBeDefined();
-      expect(dayjs(replacedOccurrence?.start).hour()).toBe(14);
+      expect(dayjs.utc(replacedOccurrence?.start).hour()).toBe(14);
     });
   });
 
