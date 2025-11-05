@@ -37,3 +37,8 @@ export interface TimeSlot {
   start: Date;
   end: Date;
 }
+
+export interface AvailabilityResult {
+  suggestions: TimeSlot[];
+  searchedUntil: Date;
+}

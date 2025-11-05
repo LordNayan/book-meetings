@@ -1,7 +1,9 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { sortBy } from 'lodash';
-import { TimeSlot } from '../types';
+import { logger } from '../logger';
+import { TimeSlot, AvailabilityResult } from '../types';
+import { findOverlaps, intervalsOverlap } from './overlap';
 
 // Enable UTC plugin for consistent timezone handling
 dayjs.extend(utc);
@@ -34,6 +36,105 @@ function mergeIntervals(intervals: TimeSlot[]): TimeSlot[] {
   }
 
   return merged;
+}
+
+/**
+ * Computes the next available time slots for a resource.
+ * Scans forward from a desired start time, checking for conflicts and suggesting alternatives.
+ * 
+ * @param resourceId - UUID of the resource to check
+ * @param desiredStart - Desired start time
+ * @param durationMinutes - Duration of the booking in minutes
+ * @param searchHorizonHours - How far ahead to search (default: 720 hours = 30 days)
+ * @param stepMinutes - Time increment to advance when searching (default: 15 minutes)
+ * @param maxSuggestions - Maximum number of suggestions to return (default: 5)
+ * @returns Available time slot suggestions
+ */
+export async function computeNextAvailable(
+  resourceId: string,
+  desiredStart: Date,
+  durationMinutes: number,
+  searchHorizonHours = 720,
+  stepMinutes = 15,
+  maxSuggestions = 5
+): Promise<AvailabilityResult> {
+  try {
+    const suggestions: TimeSlot[] = [];
+    const searchEnd = dayjs.utc(desiredStart).add(searchHorizonHours, 'hour').toDate();
+
+    // Fetch all busy intervals within the search horizon
+    const busyInstances = await findOverlaps(resourceId, desiredStart, searchEnd);
+
+    // Convert busy instances to time slots and merge overlapping intervals
+    const busySlots = busyInstances.map((instance) => ({
+      start: instance.start,
+      end: instance.end,
+    }));
+
+    const mergedBusySlots = mergeIntervals(busySlots);
+
+    logger.debug(
+      {
+        resourceId,
+        desiredStart,
+        durationMinutes,
+        busyInstancesCount: busyInstances.length,
+        mergedBusySlotsCount: mergedBusySlots.length,
+      },
+      'Computing next available slots'
+    );
+
+    // Scan forward in time increments
+    let currentStart = dayjs.utc(desiredStart);
+    const searchEndDayjs = dayjs.utc(searchEnd);
+
+    while (currentStart.isBefore(searchEndDayjs) && suggestions.length < maxSuggestions) {
+      const candidateStart = currentStart.toDate();
+      const candidateEnd = currentStart.add(durationMinutes, 'minute').toDate();
+
+      // Check if this candidate slot conflicts with any busy slot
+      let hasConflict = false;
+      for (const busySlot of mergedBusySlots) {
+        if (intervalsOverlap(candidateStart, candidateEnd, busySlot.start, busySlot.end)) {
+          hasConflict = true;
+          // Jump to the end of this busy period to optimize search
+          currentStart = dayjs.utc(busySlot.end);
+          break;
+        }
+      }
+
+      if (!hasConflict) {
+        // Found an available slot
+        suggestions.push({
+          start: candidateStart,
+          end: candidateEnd,
+        });
+        // Move forward by step to find next slot
+        currentStart = currentStart.add(stepMinutes, 'minute');
+      }
+    }
+
+    logger.debug(
+      {
+        resourceId,
+        desiredStart,
+        suggestionsCount: suggestions.length,
+        searchedUntil: currentStart.toDate(),
+      },
+      'Computed available slots'
+    );
+
+    return {
+      suggestions,
+      searchedUntil: currentStart.toDate(),
+    };
+  } catch (error) {
+    logger.error(
+      { error, resourceId, desiredStart, durationMinutes },
+      'Failed to compute next available slots'
+    );
+    throw error;
+  }
 }
 
 /**

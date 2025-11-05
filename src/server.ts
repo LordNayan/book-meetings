@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { config } from './config';
 import { logger } from './logger';
 import { HealthCheckResponse } from './types';
+import { bookingsRouter } from './api/bookings';
 import { availabilityRouter } from './api/availability';
 
 const app = express();
@@ -22,6 +23,7 @@ app.get('/health', (_req: Request, res: Response<HealthCheckResponse>) => {
 });
 
 // API routes
+app.use('/bookings', bookingsRouter);
 app.use('/availability', availabilityRouter);
 
 // 404 handler
