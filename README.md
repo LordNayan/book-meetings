@@ -25,30 +25,13 @@ TypeScript Express API for recurring meetings with Postgres database.
 3. **Start Postgres via Docker:**
 
    ```bash
-   docker-compose up -d
+   npm run docker:up
    ```
 
-4. **Wait for database to be healthy:**
+5. **Create, Run Migrations and Seed DB:**
 
    ```bash
-   docker-compose ps
-   ```
-
-5. **Generate Prisma Client:**
-
-   ```bash
-   npm run db:generate
-   ```
-
-6. **Run database migrations:**
-
-   ```bash
-   npm run db:migrate
-   ```
-
-7. **Seed the database with sample data:**
-   ```bash
-   npm run db:seed
+   npm run db:setup
    ```
 
 ## Development
@@ -113,16 +96,6 @@ This creates:
 - 5 sample resources (conference rooms, meeting rooms, desks)
 - Several single bookings with metadata
 - 1 recurring booking with weekly pattern
-
-### Prisma Studio
-
-Open Prisma Studio to view and edit database records:
-
-```bash
-npm run db:studio
-```
-
-Access the UI at `http://localhost:5555`
 
 ## API Endpoints
 
