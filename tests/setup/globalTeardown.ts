@@ -1,3 +1,4 @@
+import { PrismaClient } from '@prisma/client';
 import { Pool } from 'pg';
 import { setTimeout } from 'timers/promises';
 
@@ -5,8 +6,16 @@ const testDbConnectionString = 'postgresql://postgres:postgres@localhost:5432/re
 
 export default async function globalTeardown() {
   const testDbPool = new Pool({ connectionString: testDbConnectionString });
-
+  
+  // Disconnect the global Prisma client if it exists
+  const prisma = (global as { __PRISMA_CLIENT__?: PrismaClient }).__PRISMA_CLIENT__;
+  
   try {
+    console.log('Disconnecting Prisma client...');
+    if (prisma) {
+      await prisma.$disconnect();
+    }
+
     console.log('Waiting for all test connections to close...');
     await setTimeout(2000); // Add a 2-second delay to ensure connections are closed
 

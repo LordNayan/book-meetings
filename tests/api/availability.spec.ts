@@ -33,10 +33,6 @@ describe('GET /availability', () => {
     });
   });
 
-  afterAll(async () => {
-    await prisma.$disconnect();
-  });
-
   it('should return all available slots when no bookings exist', async () => {
     const response = await request(app)
       .get('/availability')

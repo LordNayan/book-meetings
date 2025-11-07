@@ -14,4 +14,5 @@ module.exports = {
   verbose: true,
   testTimeout: 30000,
   maxWorkers: 1, // Run tests sequentially to avoid race conditions
+  forceExit: true, // Force Jest to exit after all tests complete
 };

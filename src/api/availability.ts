@@ -13,8 +13,74 @@ dayjs.extend(utc);
 export const availabilityRouter = Router();
 
 /**
- * GET /availability
- * Computes available time slots for a resource within a time window
+ * @swagger
+ * /availability:
+ *   get:
+ *     summary: Get available time slots for a resource
+ *     description: Computes available time slots for a resource within a specified time window, considering existing bookings (single and recurring)
+ *     tags:
+ *       - Availability
+ *     parameters:
+ *       - in: query
+ *         name: resource_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: UUID of the resource to check availability for
+ *         example: 550e8400-e29b-41d4-a716-446655440001
+ *       - in: query
+ *         name: from
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Start of the time window (ISO 8601 format)
+ *         example: 2025-11-07T00:00:00.000Z
+ *       - in: query
+ *         name: to
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: End of the time window (ISO 8601 format)
+ *         example: 2025-11-08T00:00:00.000Z
+ *       - in: query
+ *         name: slot
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: Minimum slot duration in minutes
+ *         example: 30
+ *     responses:
+ *       200:
+ *         description: Successfully computed available slots
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AvailabilityResponse'
+ *       400:
+ *         description: Invalid query parameters
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
+ *       404:
+ *         description: Resource not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *             example:
+ *               error: Resource not found
+ *               message: Resource with ID 550e8400-e29b-41d4-a716-446655440001 does not exist
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 availabilityRouter.get('/', async (req: Request, res: Response) => {
   try {

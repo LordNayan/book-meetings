@@ -1,7 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { logger } from '../src/logger';
 import dayjs from 'dayjs';
-import { v4 as uuidv4 } from 'uuid';
 
 const prisma = new PrismaClient();
 
@@ -10,11 +9,11 @@ const seed = async () => {
     logger.info('Starting database seed...');
 
     // Seed resources
-    const confereRoomAId = uuidv4();
-    const confereRoomBId = uuidv4();
-    const meetingRoom1Id = uuidv4();
-    const deskBooking01Id = uuidv4();
-    const deskBooking02Id = uuidv4();
+    const confereRoomAId = '550e8400-e29b-41d4-a716-446655440001';
+    const confereRoomBId = '550e8400-e29b-41d4-a716-446655440002';
+    const meetingRoom1Id = '550e8400-e29b-41d4-a716-446655440003';
+    const deskBooking01Id = '550e8400-e29b-41d4-a716-446655440004';
+    const deskBooking02Id = '550e8400-e29b-41d4-a716-446655440005';
     const resources = [
             { id: confereRoomAId, name: 'Conference Room A' },
             { id: confereRoomBId, name: 'Conference Room B' },

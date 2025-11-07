@@ -33,10 +33,6 @@ describe('POST /bookings', () => {
     });
   });
 
-  afterAll(async () => {
-    await prisma.$disconnect();
-  });
-
   describe('Single bookings', () => {
     it('should create a single booking when no conflicts exist', async () => {
       const response = await request(app)
@@ -80,7 +76,13 @@ describe('POST /bookings', () => {
       expect(response.status).toBe(409);
       expect(response.body.status).toBe('conflict');
       expect(response.body.conflicts).toBeDefined();
+      expect(response.body.conflicts.length).toBeGreaterThan(0);
+      expect(response.body.conflicts[0]).toHaveProperty('booking_id');
+      expect(response.body.conflicts[0]).toHaveProperty('start');
+      expect(response.body.conflicts[0]).toHaveProperty('end');
+      expect(response.body.conflicts[0]).toHaveProperty('is_recurring');
       expect(response.body.next_available).toBeDefined();
+      expect(Array.isArray(response.body.next_available)).toBe(true);
     });
 
     it('should return 400 for invalid request data', async () => {
@@ -150,7 +152,16 @@ describe('POST /bookings', () => {
 
       expect(response.status).toBe(409);
       expect(response.body.status).toBe('conflict');
-      expect(response.body.conflicting_occurrences).toBeDefined();
+      expect(response.body.conflicts).toBeDefined();
+      expect(response.body.conflicts.length).toBeGreaterThan(0);
+      expect(response.body.conflicts[0]).toHaveProperty('booking_id');
+      expect(response.body.conflicts[0]).toHaveProperty('start');
+      expect(response.body.conflicts[0]).toHaveProperty('end');
+      expect(response.body.conflicts[0]).toHaveProperty('is_recurring');
+      expect(response.body.conflicts[0]).toHaveProperty('occurrence_start');
+      expect(response.body.conflicts[0]).toHaveProperty('occurrence_end');
+      expect(response.body.next_available).toBeDefined();
+      expect(Array.isArray(response.body.next_available)).toBe(true);
     });
 
     it('should return 400 for invalid RRULE', async () => {

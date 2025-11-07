@@ -19,10 +19,6 @@ beforeAll(async () => {
   await prisma.$connect();
 });
 
-// Cleanup function to run after each test file
-afterAll(async () => {
-  await prisma.$disconnect();
-});
+// Note: Prisma client is disconnected in globalTeardown.ts
+// to avoid premature disconnection during test execution
 
-// Note: Individual test files handle their own cleanup
-// to ensure proper test isolation and avoid conflicts

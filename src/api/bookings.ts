@@ -14,8 +14,123 @@ dayjs.extend(utc);
 export const bookingsRouter = Router();
 
 /**
- * POST /bookings
- * Creates a new booking (single or recurring) with conflict detection
+ * @swagger
+ * /bookings:
+ *   post:
+ *     summary: Create a new booking
+ *     description: Creates a new booking (single or recurring) with automatic conflict detection. Returns conflicts with suggestions if the requested time is unavailable.
+ *     tags:
+ *       - Bookings
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/BookingRequest'
+ *           examples:
+ *             singleBooking:
+ *               summary: Single booking
+ *               value:
+ *                 resource_id: 550e8400-e29b-41d4-a716-446655440001
+ *                 start_time: "2025-11-07T09:00:00.000Z"
+ *                 end_time: "2025-11-07T10:00:00.000Z"
+ *                 metadata:
+ *                   title: "Team Meeting"
+ *                   attendees: 5
+ *             recurringBooking:
+ *               summary: Recurring booking
+ *               value:
+ *                 resource_id: 550e8400-e29b-41d4-a716-446655440001
+ *                 start_time: "2025-11-07T09:00:00.000Z"
+ *                 end_time: "2025-11-07T10:00:00.000Z"
+ *                 recurrence_rule: "FREQ=DAILY;COUNT=5"
+ *                 metadata:
+ *                   title: "Daily Standup"
+ *             recurringWithExceptions:
+ *               summary: Recurring booking with exceptions
+ *               value:
+ *                 resource_id: 550e8400-e29b-41d4-a716-446655440001
+ *                 start_time: "2025-11-07T09:00:00.000Z"
+ *                 end_time: "2025-11-07T10:00:00.000Z"
+ *                 recurrence_rule: "FREQ=WEEKLY;BYDAY=MO,WE,FR;COUNT=10"
+ *                 exceptions:
+ *                   - date: "2025-11-15T00:00:00.000Z"
+ *                   - date: "2025-11-20T00:00:00.000Z"
+ *                     replace_start: "2025-11-20T14:00:00.000Z"
+ *                     replace_end: "2025-11-20T15:00:00.000Z"
+ *                 metadata:
+ *                   title: "Weekly Review"
+ *     responses:
+ *       201:
+ *         description: Booking created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/BookingSuccessResponse'
+ *       400:
+ *         description: Invalid request body or validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
+ *       404:
+ *         description: Resource not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *             example:
+ *               error: Resource not found
+ *               message: Resource with ID 550e8400-e29b-41d4-a716-446655440001 does not exist
+ *       409:
+ *         description: Booking conflict detected
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ConflictResponse'
+ *             examples:
+ *               singleBookingConflict:
+ *                 summary: Single booking conflict
+ *                 value:
+ *                   status: conflict
+ *                   message: Time slot conflicts with existing bookings
+ *                   conflicts:
+ *                     - booking_id: "123e4567-e89b-12d3-a456-426614174000"
+ *                       start: "2025-11-07T09:00:00.000Z"
+ *                       end: "2025-11-07T10:00:00.000Z"
+ *                       is_recurring: false
+ *                   next_available:
+ *                     - start: "2025-11-07T10:00:00.000Z"
+ *                       end: "2025-11-07T11:00:00.000Z"
+ *                     - start: "2025-11-07T11:00:00.000Z"
+ *                       end: "2025-11-07T12:00:00.000Z"
+ *               recurringBookingConflict:
+ *                 summary: Recurring booking conflict
+ *                 value:
+ *                   status: conflict
+ *                   message: 2 occurrence(s) conflict with existing bookings
+ *                   conflicts:
+ *                     - booking_id: "123e4567-e89b-12d3-a456-426614174000"
+ *                       start: "2025-11-07T09:00:00.000Z"
+ *                       end: "2025-11-07T10:00:00.000Z"
+ *                       is_recurring: false
+ *                       occurrence_start: "2025-11-07T09:00:00.000Z"
+ *                       occurrence_end: "2025-11-07T10:00:00.000Z"
+ *                     - booking_id: "987e6543-e21b-98d7-b654-789456123000"
+ *                       start: "2025-11-08T09:00:00.000Z"
+ *                       end: "2025-11-08T10:00:00.000Z"
+ *                       is_recurring: true
+ *                       occurrence_start: "2025-11-08T09:00:00.000Z"
+ *                       occurrence_end: "2025-11-08T10:00:00.000Z"
+ *                   next_available:
+ *                     - start: "2025-11-07T10:00:00.000Z"
+ *                       end: "2025-11-07T11:00:00.000Z"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 bookingsRouter.post('/', async (req: Request, res: Response) => {
   try {
@@ -160,18 +275,36 @@ bookingsRouter.post('/', async (req: Request, res: Response) => {
 
     // If any conflicts found, return them
     if (allConflicts.length > 0) {
+      // Flatten all conflicts into a single array for consistent response structure
+      const flatConflicts = allConflicts.flatMap((c) =>
+        c.conflicts.map((conflict) => ({
+          booking_id: conflict.bookingId,
+          start: conflict.start.toISOString(),
+          end: conflict.end.toISOString(),
+          is_recurring: conflict.isRecurring,
+          occurrence_start: c.occurrence_start,
+          occurrence_end: c.occurrence_end,
+        }))
+      );
+
+      // Compute next available slots for recurring bookings
+      const durationMinutes = dayjs.utc(endTime).diff(dayjs.utc(startTime), 'minute');
+      const availability = await computeNextAvailable(
+        resourceId,
+        startTime,
+        durationMinutes,
+        720, // Search 30 days ahead
+        15, // 15-minute increments
+        5 // Max 5 suggestions
+      );
+
       return res.status(409).json({
         status: 'conflict',
         message: `${allConflicts.length} occurrence(s) conflict with existing bookings`,
-        conflicting_occurrences: allConflicts.map((c) => ({
-          start: c.occurrence_start,
-          end: c.occurrence_end,
-          conflicts: c.conflicts.map((conflict) => ({
-            booking_id: conflict.bookingId,
-            start: conflict.start.toISOString(),
-            end: conflict.end.toISOString(),
-            is_recurring: conflict.isRecurring,
-          })),
+        conflicts: flatConflicts,
+        next_available: availability.suggestions.map((slot) => ({
+          start: slot.start.toISOString(),
+          end: slot.end.toISOString(),
         })),
       });
     }
