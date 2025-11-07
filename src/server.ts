@@ -19,6 +19,26 @@ app.use((req, _res, next) => {
   next();
 });
 
+/**
+ * @swagger
+ * /health:
+ *   get:
+ *     summary: Health check endpoint
+ *     description: Returns the health status of the API
+ *     tags:
+ *       - Health
+ *     responses:
+ *       200:
+ *         description: API is healthy
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: ok
+ */
 // Health check route
 app.get("/health", (_req: Request, res: Response<HealthCheckResponse>) => {
   res.status(200).json({ status: "ok" });

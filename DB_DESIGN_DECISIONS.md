@@ -4,6 +4,12 @@
 
 This document explains the rationale and design choices for the database schema powering the book-meetings. The goal is to efficiently support single and recurring bookings, exceptions, and resource management, with robust querying and extensibility.
 
+## Database Schema
+
+<img width="1337" height="519" alt="Screenshot 2025-11-07 at 5 13 35 PM" src="https://github.com/user-attachments/assets/f8fcb74c-b9c5-4c3d-bbe8-561cdba5f6c4" />
+
+## DESIGN DECISIONS
+
 ## Why Postgres was chosen over any other NoSQL DB?
 
 1. Native Time Range Support - Postgres supports tstzrange type out of the box which will be useful for overlap logic.

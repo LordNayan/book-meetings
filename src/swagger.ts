@@ -345,7 +345,7 @@ const options: swaggerJsdoc.Options = {
       },
     },
   },
-  apis: ['./src/api/*.ts'], // Path to the API routes
+  apis: ['./src/api/*.ts', './src/server.ts'], // Path to the API routes and server for health endpoint
 };
 
 export const swaggerSpec = swaggerJsdoc(options);

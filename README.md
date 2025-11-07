@@ -1,6 +1,18 @@
-# book-meetings
+# Book Meetings
 
-TypeScript Express API for recurring meetings with Postgres database.
+A high-performance API service for booking single and recurring meetings with conflict detection, availability search, and next-slot recommendations, built in Node.js with PostgreSQL. It handles infinite recurrences, exceptions, and load resilience through optimized range queries and structured recurrence expansion.
+
+<img width="1501" height="920" alt="Screenshot 2025-11-07 at 5 10 09 PM" src="https://github.com/user-attachments/assets/1646215b-aa82-49f1-8af0-cfb5a2d8f093" />
+
+## Tech Stack
+
+- **Runtime:** Node.js with TypeScript
+- **Framework:** Express.js
+- **Database:** Postgres 16 with Prisma ORM
+- **Validation:** Zod
+- **Logging:** Pino
+- **Testing:** Jest with ts-jest
+- **Date handling:** dayjs
 
 ## Prerequisites
 
@@ -70,120 +82,8 @@ Run production build:
 npm start
 ```
 
-## Database Management
+## Server Information
 
-### Migrations
+The server runs on port `3000` by default.
 
-Run migrations to set up the database schema:
-
-```bash
-npm run db:migrate
-```
-
-This will create the following tables:
-
-- `resources` - Bookable resources (rooms, desks, etc.)
-- `bookings` - Individual booking records with time ranges
-- `recurrence_rules` - Recurrence patterns (RRULE format)
-- `exceptions` - Exceptions and modifications to recurring bookings
-
-### Seed Data
-
-Populate the database with sample data:
-
-```bash
-npm run db:seed
-```
-
-This creates:
-
-- 5 sample resources (conference rooms, meeting rooms, desks)
-- Several single bookings with metadata
-- 1 recurring booking with weekly pattern
-
-## API Endpoints
-
-- `GET /health` - Health check endpoint, returns `{ status: "ok" }`
-
-## Database Schema
-
-### Resources
-
-```sql
-id (TEXT PRIMARY KEY) - Unique resource identifier
-name (TEXT) - Display name of the resource
-```
-
-### Bookings
-
-```sql
-id (UUID PRIMARY KEY) - Booking ID
-resource_id (TEXT FK) - Reference to resource
-start_time (TIMESTAMPTZ) - Booking start time
-end_time (TIMESTAMPTZ) - Booking end time
-time_range (TSTZRANGE) - Generated time range column
-metadata (JSONB) - Additional booking data
-created_at (TIMESTAMPTZ) - Creation timestamp
-```
-
-**Indexes:**
-
-- GIST index on `(resource_id, time_range)` for efficient range queries
-- B-tree index on `(resource_id, start_time, end_time)`
-
-### Recurrence Rules
-
-```sql
-booking_id (UUID PRIMARY KEY FK) - Reference to booking
-rrule (TEXT) - RFC 5545 RRULE string
-is_infinite (BOOLEAN) - Whether recurrence has no end
-```
-
-### Exceptions
-
-```sql
-id (UUID PRIMARY KEY) - Exception ID
-booking_id (UUID FK) - Reference to booking
-except_date (DATE) - Date to exclude or modify
-replace_start (TIMESTAMPTZ) - Replacement start time (nullable)
-replace_end (TIMESTAMPTZ) - Replacement end time (nullable)
-```
-
-**Index:**
-
-- B-tree index on `(booking_id, except_date)`
-
-## Project Structure
-
-```
-src/
-├── server.ts   # Express app and routes
-├── config.ts   # Environment configuration
-├── logger.ts   # Pino logger setup
-├── db.ts       # Prisma client singleton
-└── types.ts    # TypeScript interfaces
-
-prisma/
-└── schema.prisma  # Prisma schema definition
-
-db/
-└── migrations/
-    └── 001_init.sql  # Initial SQL migration
-
-scripts/
-├── initDb.ts  # Database initialization script
-└── seed.ts     # Database seed script
-
-tests/
-└── sample.test.ts  # Basic tests
-```
-
-## Tech Stack
-
-- **Runtime:** Node.js with TypeScript
-- **Framework:** Express.js
-- **Database:** Postgres 16 with Prisma ORM
-- **Validation:** Zod
-- **Logging:** Pino
-- **Testing:** Jest with ts-jest
-- **Date handling:** dayjs
+API documentation is available at `http://localhost:3000/api-docs`
