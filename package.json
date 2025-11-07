@@ -10,14 +10,14 @@
     "test": "jest",
     "lint": "eslint src/**/*.ts tests/**/*.ts",
     "db:generate": "prisma generate",
-    "db:migrate": "ts-node scripts/init-db.ts",
+    "db:migrate": "ts-node scripts/initDb.ts",
     "db:seed": "ts-node scripts/seed.ts",
     "db:setup": "npm run db:generate && npm run db:migrate && npm run db:seed",
     "db:studio": "prisma studio",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down -v",
-    "load:test": "ts-node scripts/setup-test-resources.ts && k6 run perf/k6-load.js && ts-node tests/setup/globalTeardown.ts",
-    "spike:test": "ts-node scripts/setup-test-resources.ts && k6 run perf/k6-spike.js && ts-node tests/setup/globalTeardown.ts"
+    "load:test": "ts-node tests/setup/setupTestResources.ts && k6 run tests/perf/k6Load.js && ts-node tests/setup/globalTeardown.ts",
+    "spike:test": "ts-node tests/setup/setupTestResources.ts && k6 run tests/perf/k6Spike.js && ts-node tests/setup/globalTeardown.ts"
   },
   "keywords": [
     "typescript",

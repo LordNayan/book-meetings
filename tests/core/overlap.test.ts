@@ -1,5 +1,5 @@
 import { hasConflict, intervalsOverlap, findOverlaps } from '../../src/core/overlap';
-import { prisma } from '../setup/testSetup';
+import { prisma } from '../setup/setupTestPrisma';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 

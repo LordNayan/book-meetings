@@ -1,6 +1,6 @@
 import request from 'supertest';
 import app from '../../src/server';
-import { prisma } from '../setup/testSetup';
+import { prisma } from '../setup/setupTestPrisma';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 

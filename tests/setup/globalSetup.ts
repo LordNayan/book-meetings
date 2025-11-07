@@ -11,7 +11,7 @@ export default async function globalSetup() {
   
   try {
     // Ensure the test database is created and migrations are applied
-    execSync('ts-node scripts/setup-test-resources.ts', { stdio: 'inherit' });
+    execSync('ts-node tests/setup/setupTestResources.ts', { stdio: 'inherit' });
   } catch (error) {
     console.error('Failed to setup test database:', error);
     throw error;

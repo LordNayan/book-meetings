@@ -1,5 +1,5 @@
 import http from 'k6/http';
-import { check, sleep } from 'k6';
+import { check } from 'k6';
 import { Rate, Trend, Counter } from 'k6/metrics';
 
 // Custom metrics
@@ -9,6 +9,7 @@ const bookingDuration = new Trend('booking_duration');
 const requestCounter = new Counter('total_requests');
 
 // Configuration
+/* global __ENV */
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:3000';
 // Generate valid UUIDs for resources
 const RESOURCE_IDS = [
@@ -22,16 +23,24 @@ const RESOURCE_IDS = [
   '550e8400-e29b-41d4-a716-446655440008',
 ];
 
-// Test configuration - 1 hour duration with ramp phases
+// Test configuration - 30 seconds spike with 10,000 requests
+// Using constant VUs to simulate sudden spike
 export const options = {
-  stages: [
-    { duration: '10s', target: 1 },  // Just 1 VU for 10 seconds to test
-  ],
+  scenarios: {
+    spike: {
+      executor: 'constant-arrival-rate',
+      rate: 333, // ~333 requests per second = ~10,000 requests in 30 seconds
+      timeUnit: '1s',
+      duration: '30s',
+      preAllocatedVUs: 100, // Pre-allocate VUs
+      maxVUs: 200, // Allow up to 200 VUs if needed
+    },
+  },
   thresholds: {
-    'http_req_duration': ['p(50)<120', 'p(95)<250', 'p(99)<500'],
-    'http_req_failed': ['rate<0.05'], // Less than 5% errors
-    'availability_duration': ['p(95)<200'],
-    'booking_duration': ['p(95)<300'],
+    'http_req_duration': ['p(95)<500', 'p(99)<1000'],
+    'http_req_failed': ['rate<0.10'], // Less than 10% errors during spike (more lenient)
+    'availability_duration': ['p(95)<400'],
+    'booking_duration': ['p(95)<600'],
   },
   summaryTrendStats: ['min', 'avg', 'med', 'p(90)', 'p(95)', 'p(99)', 'max'],
   summaryTimeUnit: 'ms',
@@ -46,16 +55,17 @@ function randomElement(arr) {
 let slotCounter = 0;
 
 // Helper function to generate non-overlapping future dates
-// Each call returns a time slot that's at least 2 hours apart from previous slots
+// Each call returns a time slot that's at least 3 hours apart from previous slots
+// (to accommodate varying booking durations in spike test)
 function randomFutureDate() {
   const now = new Date();
   
   // Start from 1 hour in the future to avoid any past dates
   const baseOffsetHours = 1;
   
-  // Each slot is separated by 2 hours to prevent any overlap
-  // (1 hour booking + 1 hour buffer)
-  const slotSeparationHours = 2;
+  // Each slot is separated by 3 hours to prevent any overlap
+  // (up to 2 hours booking + 1 hour buffer)
+  const slotSeparationHours = 3;
   
   // Calculate offset based on counter to ensure non-overlapping slots
   const totalOffsetHours = baseOffsetHours + (slotCounter * slotSeparationHours);
@@ -79,24 +89,28 @@ function addHours(dateString, hours) {
   return date.toISOString();
 }
 
+// Helper function to add minutes to a date
+function addMinutes(dateString, minutes) {
+  const date = new Date(dateString);
+  date.setMinutes(date.getMinutes() + minutes);
+  return date.toISOString();
+}
+
 // GET /availability request
 function checkAvailability() {
   const resourceId = randomElement(RESOURCE_IDS);
   const startTime = randomFutureDate();
-  const endTime = addHours(startTime, 8); // 8-hour window
+  // Vary the query window: 1-4 hours
+  const windowHours = Math.floor(Math.random() * 3) + 1;
+  const endTime = addHours(startTime, windowHours);
   
   const url = `${BASE_URL}/availability?resource_id=${resourceId}&from=${startTime}&to=${endTime}`;
-  
-  console.log(`[GET /availability] URL: ${url}`);
   
   const response = http.get(url, {
     tags: { name: 'GetAvailability' },
   });
   
-  console.log(`[GET /availability] Status: ${response.status}`);
-  console.log(`[GET /availability] Body: ${response.body}`);
-  
-  const success = check(response, {
+  check(response, {
     'availability status is 200': (r) => r.status === 200,
     'availability response has slots': (r) => {
       try {
@@ -121,17 +135,18 @@ function checkAvailability() {
 function createBooking() {
   const resourceId = randomElement(RESOURCE_IDS);
   const startTime = randomFutureDate();
-  const endTime = addHours(startTime, 1); // 1-hour booking
+  // Vary booking duration: 30 min, 1 hour, or 2 hours
+  const durations = [30, 60, 120];
+  const duration = randomElement(durations);
+  const endTime = addMinutes(startTime, duration);
   
   const payload = JSON.stringify({
     resource_id: resourceId,
     start_time: startTime,
     end_time: endTime,
-    title: `Load Test Booking ${Math.random().toString(36).substring(7)}`,
-    description: 'Automated load test booking',
+    title: `Spike Test Booking ${Math.random().toString(36).substring(7)}`,
+    description: 'Automated spike test booking',
   });
-  
-  console.log(`[POST /bookings] Payload: ${payload}`);
   
   const params = {
     headers: {
@@ -142,10 +157,7 @@ function createBooking() {
   
   const response = http.post(`${BASE_URL}/bookings`, payload, params);
   
-  console.log(`[POST /bookings] Status: ${response.status}`);
-  console.log(`[POST /bookings] Body: ${response.body}`);
-  
-  const success = check(response, {
+  check(response, {
     'booking status is 201 or 409': (r) => r.status === 201 || r.status === 409,
     'booking response has id or error': (r) => {
       try {
@@ -167,52 +179,49 @@ function createBooking() {
   return response;
 }
 
-// Main test scenario - 70% GET, 30% POST
+// Main test scenario - 80% GET, 20% POST
 export default function () {
   const rand = Math.random();
   
-  if (rand < 0.7) {
-    // 70% - Check availability
+  if (rand < 0.8) {
+    // 80% - Check availability
     checkAvailability();
   } else {
-    // 30% - Create booking
+    // 20% - Create booking
     createBooking();
   }
   
-  // Think time - simulate realistic user behavior
-  // Average ~3.6 seconds between requests to achieve ~1000 requests/hour with 10 VUs
-  sleep(Math.random() * 7 + 0.5); // Random sleep 0.5-7.5 seconds
+  // No sleep - maximum throughput for spike test
 }
 
 // Setup function - runs once before the test
 export function setup() {
-  console.log(`Starting load test against ${BASE_URL}`);
+  console.log(`Starting spike test against ${BASE_URL}`);
   console.log(`Resource IDs: ${RESOURCE_IDS.join(', ')}`);
-  console.log('Test duration: 10 seconds');
-  console.log('Expected load: ~1000 requests/hour (70% GET, 30% POST)');
-  console.log('\nNote: Ensure test resources are created by running:');
-  console.log('  npm run perf:setup\n');
+  console.log('Test duration: 30 seconds');
+  console.log('Target: ~10,000 requests (80% GET, 20% POST)');
+  console.log('Arrival rate: ~333 requests/second');
 }
 
 // Teardown function - runs once after the test
-export function teardown(data) {
-  console.log('Load test completed');
+export function teardown(_data) {
+  console.log('Spike test completed');
 }
 
 // Export summary to JSON
 export function handleSummary(data) {
   return {
-    'perf/load-test-summary.json': JSON.stringify(data, null, 2),
+    'tests/spike-test-summary.json': JSON.stringify(data, null, 2),
     'stdout': textSummary(data, { indent: ' ', enableColors: true }),
   };
 }
 
 function textSummary(data, options) {
-  const { indent = '', enableColors = false } = options;
+  const { indent = '' } = options;
   const metrics = data.metrics;
   
   let output = '\n';
-  output += `${indent}Load Test Summary\n`;
+  output += `${indent}Spike Test Summary\n`;
   output += `${indent}${'='.repeat(60)}\n\n`;
   
   if (metrics.http_req_duration && metrics.http_req_duration.values) {
@@ -232,11 +241,21 @@ function textSummary(data, options) {
   }
   
   if (metrics.total_requests && metrics.total_requests.values && metrics.total_requests.values.count !== undefined) {
-    output += `${indent}Total Requests: ${metrics.total_requests.values.count}\n\n`;
+    output += `${indent}Total Requests: ${metrics.total_requests.values.count}\n`;
+    const duration = 30; // 30 seconds
+    const rps = (metrics.total_requests.values.count / duration).toFixed(2);
+    output += `${indent}Requests/sec: ${rps}\n\n`;
   }
   
   if (metrics.vus_max && metrics.vus_max.values && metrics.vus_max.values.max !== undefined) {
     output += `${indent}Virtual Users (max): ${metrics.vus_max.values.max}\n\n`;
+  }
+  
+  if (metrics.iterations && metrics.iterations.values && metrics.iterations.values.count !== undefined) {
+    output += `${indent}Iterations: ${metrics.iterations.values.count}\n`;
+    if (metrics.iteration_duration && metrics.iteration_duration.values && metrics.iteration_duration.values.avg !== undefined) {
+      output += `${indent}Iteration Duration (avg): ${metrics.iteration_duration.values.avg.toFixed(2)} ms\n\n`;
+    }
   }
   
   output += `${indent}${'='.repeat(60)}\n`;

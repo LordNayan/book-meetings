@@ -54,7 +54,7 @@ npm test
 
 ## Performance Testing
 
-For detailed information on performance testing, refer to the [Performance Testing Guide](perf/README.md).
+For detailed information on performance testing, refer to the [Performance Testing Guide](tests/perf/README.md).
 
 ## Building
 
@@ -171,7 +171,7 @@ db/
     └── 001_init.sql  # Initial SQL migration
 
 scripts/
-├── init-db.ts  # Database initialization script
+├── initDb.ts  # Database initialization script
 └── seed.ts     # Database seed script
 
 tests/

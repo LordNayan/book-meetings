@@ -4,8 +4,8 @@ This directory contains K6 performance tests for the recurring-meetings-api. The
 
 ## Overview
 
-- **k6-load.js**: Steady-state load test (1 hour duration)
-- **k6-spike.js**: Spike/burst test (30 seconds duration)
+- **k6Load.js**: Steady-state load test (1 hour duration)
+- **k6Spike.js**: Spike/burst test (30 seconds duration)
 - **Results.md**: Performance test findings and optimization recommendations
 
 ## Prerequisites
@@ -87,10 +87,10 @@ The test will automatically:
 npm run spike:test
 
 # Or directly with k6
-k6 run perf/k6-spike.js
+k6 run tests/perf/k6Spike.js
 
 # With custom base URL
-BASE_URL=http://localhost:4000 k6 run perf/k6-spike.js
+BASE_URL=http://localhost:4000 k6 run tests/perf/k6Spike.js
 ```
 
 **Spike Test Profile:**
@@ -112,7 +112,7 @@ Both tests support the following environment variables:
 
 Example with custom environment:
 ```bash
-BASE_URL=https://staging.example.com k6 run perf/k6-load.js
+BASE_URL=https://staging.example.com k6 run tests/perf/k6Load.js
 ```
 
 ## Key Metrics
@@ -183,8 +183,8 @@ Both tests generate two outputs:
 
 1. **Console Summary**: Real-time statistics printed to stdout
 2. **JSON Summary**: Detailed metrics exported to:
-   - `perf/load-test-summary.json` (load test)
-   - `perf/spike-test-summary.json` (spike test)
+   - `tests/perf/load-test-summary.json` (load test)
+   - `tests/perf/spike-test-summary.json` (spike test)
 
 ### Reading JSON Output
 
