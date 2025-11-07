@@ -46,11 +46,15 @@ The API will be available at `http://localhost:3000`
 
 ## Testing
 
-Run tests:
+Run Unit Tests:
 
 ```bash
 npm test
 ```
+
+## Performance Testing
+
+For detailed information on performance testing, refer to the [Performance Testing Guide](perf/README.md).
 
 ## Building
 

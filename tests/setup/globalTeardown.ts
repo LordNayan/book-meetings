@@ -1,29 +1,58 @@
-import { PrismaClient } from '@prisma/client';
-import { execSync } from 'child_process';
+import { Pool } from 'pg';
+import { setTimeout } from 'timers/promises';
 
-const prisma = new PrismaClient();
+const adminConnectionString = 'postgresql://postgres:postgres@localhost:5432/postgres';
+const MAX_RETRIES = 5;
+const RETRY_DELAY_MS = 1000;
 
 export default async function globalTeardown() {
+  const adminPool = new Pool({ connectionString: adminConnectionString });
+
   try {
-    // Always disconnect Prisma first
-    await prisma.$disconnect();
+    console.log('Waiting for all test connections to close...');
+    await setTimeout(2000); // Add a 2-second delay to ensure connections are closed
 
-    // Use the default postgres database to drop the test database
-    const adminUrl = 'postgresql://postgres:postgres@localhost:5432/postgres';
-    
-    // Force terminate all connections to the test database
-    execSync(
-      `psql "${adminUrl}" -c "SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = 'recurring_meetings_test' AND pid <> pg_backend_pid();"`,
-      { stdio: 'inherit' }
-    );
+    console.log('Terminating connections to the test database...');
+    await adminPool.query(`
+      SELECT pg_terminate_backend(pg_stat_activity.pid)
+      FROM pg_stat_activity
+      WHERE pg_stat_activity.datname = 'recurring_meetings_test'
+        AND pid <> pg_backend_pid();
+    `);
+    console.log('✓ Connections terminated');
 
-    // Drop the database
-    execSync(
-      `psql "${adminUrl}" -c "DROP DATABASE IF EXISTS recurring_meetings_test;"`,
-      { stdio: 'inherit' }
-    );
+    let retries = 0;
+    while (retries < MAX_RETRIES) {
+      try {
+        console.log('Dropping the test database...');
+        await adminPool.query('DROP DATABASE IF EXISTS recurring_meetings_test');
+        console.log('✓ Test database dropped');
+        break;
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('being accessed by other users')) {
+          retries++;
+          console.warn(`Retry ${retries}/${MAX_RETRIES}: Waiting for active connections to close...`);
+          await setTimeout(RETRY_DELAY_MS);
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    if (retries === MAX_RETRIES) {
+      throw new Error('Failed to drop the test database after maximum retries.');
+    }
   } catch (error) {
     console.error('Failed to drop test database:', error);
     throw error;
+  } finally {
+    await adminPool.end();
   }
+}
+
+if (require.main === module) {
+  globalTeardown().catch((error) => {
+    console.error('Error during global teardown:', error);
+    process.exit(1);
+  });
 }
