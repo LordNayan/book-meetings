@@ -1,7 +1,5 @@
 import { Pool } from 'pg';
 import { execSync } from 'child_process';
-import { existsSync } from 'fs';
-import { resolve } from 'path';
 
 const RESOURCE_IDS = [
   '550e8400-e29b-41d4-a716-446655440001',
@@ -28,19 +26,11 @@ async function ensureTestDatabase() {
     const result = await adminPool.query(
       `SELECT 1 FROM pg_database WHERE datname = 'recurring_meetings_test'`
     );
-
-    console.log('Result rows:', result.rows);
     
     if (result.rows.length === 0) {
       console.log('Test database does not exist. Creating...');
       await adminPool.query('CREATE DATABASE recurring_meetings_test');
       console.log('✓ Test database created');
-      
-      console.log('Running migrations on test database...');
-      execSync('DATABASE_URL=postgresql://postgres:postgres@localhost:5432/recurring_meetings_test npm run db:migrate', {
-        stdio: 'inherit',
-      });
-      console.log('✓ Migrations completed');
     } else {
       console.log('✓ Test database already exists');
     }
@@ -53,27 +43,23 @@ async function ensureTestDatabase() {
 }
 
 /**
- * Checks if migrations are up-to-date
+ * Ensures test database schema is up-to-date by running migrations
  */
-async function verifyMigrations() {
-  console.log('Verifying migrations...');
-
-  const migrationFolder = resolve(__dirname, '../prisma/migrations');
-  if (!existsSync(migrationFolder)) {
-    console.warn('⚠️  Migration folder not found. Skipping migration check.');
-    return;
-  }
-
+async function ensureTestSchema() {
+  console.log('Ensuring test database schema is up-to-date...');
+  
   try {
-    execSync('DATABASE_URL=postgresql://postgres:postgres@localhost:5432/recurring_meetings_test prisma migrate status', {
+    execSync('DATABASE_URL=postgresql://postgres:postgres@localhost:5432/recurring_meetings_test npm run db:migrate', {
       stdio: 'inherit',
     });
-    console.log('✓ Migrations are up-to-date');
+    console.log('✓ Schema migrations completed');
   } catch (error) {
-    console.error('❌ Migrations are not up-to-date. Please run migrations manually.');
+    console.error('Error running migrations:', error);
     throw error;
   }
 }
+
+
 
 /**
  * Drops and recreates the test database (optional cleanup)
@@ -138,7 +124,7 @@ async function main() {
       await ensureTestDatabase();
     }
 
-    await verifyMigrations();
+    await ensureTestSchema();
     await createTestResources();
   } catch (error) {
     console.error('Setup failed:', error);
