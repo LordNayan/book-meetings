@@ -149,7 +149,15 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
-# Load Test Summary JSON
-load-test-summary.json
-spike-test-summary.json
+# Performance Test Outputs
+tests/perf/load-test-summary.json
+tests/perf/spike-test-summary.json
+tests/perf/db-analysis-load-*.json
+tests/perf/db-analysis-spike-*.json
+
+# Database Monitoring Logs
+db-metrics*.log
+tests/perf/db-metrics*.log
+*-test-monitoring.log
+*-query-analysis.txt
 

@@ -5,6 +5,7 @@ services:
     image: postgres:16
     container_name: recurring-meetings-db
     restart: unless-stopped
+    command: postgres -c shared_preload_libraries=pg_stat_statements -c pg_stat_statements.track=all
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres

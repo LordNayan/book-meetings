@@ -211,7 +211,7 @@ export function teardown(_data) {
 // Export summary to JSON
 export function handleSummary(data) {
   return {
-    'tests/spike-test-summary.json': JSON.stringify(data, null, 2),
+    'tests/perf/spike-test-summary.json': JSON.stringify(data, null, 2),
     'stdout': textSummary(data, { indent: ' ', enableColors: true }),
   };
 }

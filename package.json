@@ -16,8 +16,8 @@
     "db:studio": "prisma studio",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down -v",
-    "load:test": "ts-node tests/setup/setupTestResources.ts && k6 run tests/perf/k6Load.js && ts-node tests/setup/globalTeardown.ts",
-    "spike:test": "ts-node tests/setup/setupTestResources.ts && k6 run tests/perf/k6Spike.js && ts-node tests/setup/globalTeardown.ts"
+    "load:test": "ts-node tests/setup/setupTestResources.ts && k6 run tests/perf/k6Load.js && ts-node tests/perf/analyzeDb.ts load && ts-node tests/setup/globalTeardown.ts",
+    "spike:test": "ts-node tests/setup/setupTestResources.ts && k6 run tests/perf/k6Spike.js && ts-node tests/perf/analyzeDb.ts spike && ts-node tests/setup/globalTeardown.ts"
   },
   "keywords": [
     "typescript",

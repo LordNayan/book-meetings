@@ -24,9 +24,13 @@ const RESOURCE_IDS = [
 ];
 
 // Test configuration - 1 hour duration with ramp phases
+// Target: ~1000 requests/hour (70% GET availability, 30% POST bookings = ~300 bookings/hour)
+// To achieve ~1000 total requests/hour with realistic think time, we need ~10 VUs
 export const options = {
   stages: [
-    { duration: '10s', target: 1 },  // Just 1 VU for 10 seconds to test
+    { duration: '5m', target: 10 },   // Ramp up to 10 VUs over 5 minutes
+    { duration: '50m', target: 10 },  // Stay at 10 VUs for 50 minutes
+    { duration: '5m', target: 0 },    // Ramp down to 0 VUs over 5 minutes
   ],
   thresholds: {
     'http_req_duration': ['p(50)<120', 'p(95)<250', 'p(99)<500'],
@@ -189,8 +193,10 @@ export default function () {
 export function setup() {
   console.log(`Starting load test against ${BASE_URL}`);
   console.log(`Resource IDs: ${RESOURCE_IDS.join(', ')}`);
-  console.log('Test duration: 10 seconds');
+  console.log('Test duration: 1 hour (5m ramp-up, 50m steady, 5m ramp-down)');
+  console.log('Virtual Users: 10 (steady state)');
   console.log('Expected load: ~1000 requests/hour (70% GET, 30% POST)');
+  console.log('Target: ~300 bookings/hour');
   console.log('\nNote: Ensure test resources are created by running:');
   console.log('  npm run perf:setup\n');
 }

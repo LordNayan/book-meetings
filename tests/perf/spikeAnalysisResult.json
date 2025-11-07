@@ -1,0 +1,78 @@
+{
+  "timestamp": "2025-11-07T11:14:29.665Z",
+  "mode": "spike",
+  "database": {
+    "urlRedacted": "postgresql://***:***@localhost:5432/recurring_meetings_test"
+  },
+  "connections": [
+    {
+      "state": "active",
+      "count": 1
+    },
+    {
+      "state": "idle",
+      "count": 17
+    }
+  ],
+  "pgStatStatementsAvailable": true,
+  "slowQueries": [
+    {
+      "avg_ms": "6.29",
+      "calls": 1,
+      "query": "-- Resources table\nCREATE TABLE IF NOT EXISTS resources (\n    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n    name TE"
+    },
+    {
+      "avg_ms": "2.19",
+      "calls": 1,
+      "query": "-- Bookings table\nCREATE TABLE IF NOT EXISTS bookings (\n    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n    resource_"
+    },
+    {
+      "avg_ms": "1.53",
+      "calls": 1,
+      "query": "-- Recurrence rules table\nCREATE TABLE IF NOT EXISTS recurrence_rules (\n    booking_id UUID PRIMARY KEY REFERENCES booki"
+    },
+    {
+      "avg_ms": "1.39",
+      "calls": 1,
+      "query": "CREATE INDEX IF NOT EXISTS idx_exceptions_booking_date \n    ON exceptions (booking_id, except_date)"
+    },
+    {
+      "avg_ms": "0.87",
+      "calls": 1,
+      "query": "-- Exceptions table\nCREATE TABLE IF NOT EXISTS exceptions (\n    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n    booki"
+    }
+  ],
+  "frequentQueries": [
+    {
+      "calls": 11292,
+      "avg_ms": "0.08",
+      "query": "SELECT id, start_time, end_time\n      FROM bookings\n      WHERE resource_id = $1::uuid\n        AND time_range && tstzran"
+    },
+    {
+      "calls": 11292,
+      "avg_ms": "0.03",
+      "query": "SELECT \"public\".\"bookings\".\"id\", \"public\".\"bookings\".\"resource_id\", \"public\".\"bookings\".\"start_time\", \"public\".\"bookings"
+    },
+    {
+      "calls": 9990,
+      "avg_ms": "0.01",
+      "query": "SELECT \"public\".\"resources\".\"id\", \"public\".\"resources\".\"name\" FROM \"public\".\"resources\" WHERE (\"public\".\"resources\".\"id\""
+    },
+    {
+      "calls": 757,
+      "avg_ms": "0.01",
+      "query": "SELECT $2 FROM ONLY \"public\".\"resources\" x WHERE \"id\" OPERATOR(pg_catalog.=) $1 FOR KEY SHARE OF x"
+    },
+    {
+      "calls": 757,
+      "avg_ms": "0.11",
+      "query": "INSERT INTO \"public\".\"bookings\" (\"resource_id\",\"start_time\",\"end_time\",\"metadata\",\"created_at\") VALUES ($1,$2,$3,$4,$5) "
+    }
+  ],
+  "aggregate": {
+    "total_queries": "30",
+    "total_calls": "35523",
+    "avg_mean_exec_time_ms": "0.53",
+    "max_mean_exec_time_ms": "6.29"
+  }
+}
