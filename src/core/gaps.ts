@@ -1,6 +1,5 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { sortBy } from 'lodash';
 import { logger } from '../logger';
 import { TimeSlot, AvailabilityResult } from '../types';
 import { findOverlaps, intervalsOverlap } from './overlap';
@@ -17,8 +16,8 @@ dayjs.extend(utc);
 function mergeIntervals(intervals: TimeSlot[]): TimeSlot[] {
   if (intervals.length === 0) return [];
 
-  // Sort by start time
-  const sorted = sortBy(intervals, (slot: TimeSlot) => slot.start.getTime());
+  // Sort by start time using native sort
+  const sorted = [...intervals].sort((a, b) => a.start.getTime() - b.start.getTime());
   const merged: TimeSlot[] = [sorted[0]];
 
   for (let i = 1; i < sorted.length; i++) {

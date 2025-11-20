@@ -8,6 +8,7 @@ const configSchema = z.object({
   nodeEnv: z.enum(['development', 'production', 'test']).default('development'),
   databaseUrl: z.string().default('postgresql://postgres:postgres@localhost:5432/recurring_meetings'),
   logLevel: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
+  recurrenceExpansionDays: z.string().default('90'),
 });
 
 const parseConfig = () => {
@@ -16,6 +17,7 @@ const parseConfig = () => {
     nodeEnv: process.env.NODE_ENV,
     databaseUrl: process.env.DATABASE_URL,
     logLevel: process.env.LOG_LEVEL,
+    recurrenceExpansionDays: process.env.RECURRENCE_EXPANSION_DAYS,
   };
 
   const result = configSchema.safeParse(config);

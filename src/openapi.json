@@ -1,0 +1,653 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Book Meetings API",
+    "version": "1.0.0",
+    "description": "API for managing meeting room bookings with recurring patterns and availability checking",
+    "contact": {
+      "name": "API Support"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Development server"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health check endpoint",
+        "description": "Returns the health status of the API",
+        "tags": ["Health"],
+        "responses": {
+          "200": {
+            "description": "API is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bookings": {
+      "post": {
+        "summary": "Create a new booking",
+        "description": "Creates a new booking (single or recurring) with automatic conflict detection. Returns conflicts with suggestions if the requested time is unavailable.",
+        "tags": ["Bookings"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookingRequest"
+              },
+              "examples": {
+                "singleBooking": {
+                  "summary": "Single booking",
+                  "value": {
+                    "resource_id": "550e8400-e29b-41d4-a716-446655440001",
+                    "start_time": "2025-11-07T09:00:00.000Z",
+                    "end_time": "2025-11-07T10:00:00.000Z",
+                    "metadata": {
+                      "title": "Team Meeting",
+                      "attendees": 5
+                    }
+                  }
+                },
+                "recurringBooking": {
+                  "summary": "Recurring booking",
+                  "value": {
+                    "resource_id": "550e8400-e29b-41d4-a716-446655440001",
+                    "start_time": "2025-11-07T09:00:00.000Z",
+                    "end_time": "2025-11-07T10:00:00.000Z",
+                    "recurrence_rule": "FREQ=DAILY;COUNT=5",
+                    "metadata": {
+                      "title": "Daily Standup"
+                    }
+                  }
+                },
+                "recurringWithExceptions": {
+                  "summary": "Recurring booking with exceptions",
+                  "value": {
+                    "resource_id": "550e8400-e29b-41d4-a716-446655440001",
+                    "start_time": "2025-11-07T09:00:00.000Z",
+                    "end_time": "2025-11-07T10:00:00.000Z",
+                    "recurrence_rule": "FREQ=WEEKLY;BYDAY=MO,WE,FR;COUNT=10",
+                    "exceptions": [
+                      {
+                        "date": "2025-11-15T00:00:00.000Z"
+                      },
+                      {
+                        "date": "2025-11-20T00:00:00.000Z",
+                        "replace_start": "2025-11-20T14:00:00.000Z",
+                        "replace_end": "2025-11-20T15:00:00.000Z"
+                      }
+                    ],
+                    "metadata": {
+                      "title": "Weekly Review"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Booking created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body or validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Resource not found",
+                  "message": "Resource with ID 550e8400-e29b-41d4-a716-446655440001 does not exist"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Booking conflict detected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictResponse"
+                },
+                "examples": {
+                  "singleBookingConflict": {
+                    "summary": "Single booking conflict",
+                    "value": {
+                      "status": "conflict",
+                      "message": "Time slot conflicts with existing bookings",
+                      "conflicts": [
+                        {
+                          "booking_id": "123e4567-e89b-12d3-a456-426614174000",
+                          "start": "2025-11-07T09:00:00.000Z",
+                          "end": "2025-11-07T10:00:00.000Z",
+                          "is_recurring": false
+                        }
+                      ],
+                      "next_available": [
+                        {
+                          "start": "2025-11-07T10:00:00.000Z",
+                          "end": "2025-11-07T11:00:00.000Z"
+                        },
+                        {
+                          "start": "2025-11-07T11:00:00.000Z",
+                          "end": "2025-11-07T12:00:00.000Z"
+                        }
+                      ]
+                    }
+                  },
+                  "recurringBookingConflict": {
+                    "summary": "Recurring booking conflict",
+                    "value": {
+                      "status": "conflict",
+                      "message": "2 occurrence(s) conflict with existing bookings",
+                      "conflicts": [
+                        {
+                          "booking_id": "123e4567-e89b-12d3-a456-426614174000",
+                          "start": "2025-11-07T09:00:00.000Z",
+                          "end": "2025-11-07T10:00:00.000Z",
+                          "is_recurring": false,
+                          "occurrence_start": "2025-11-07T09:00:00.000Z",
+                          "occurrence_end": "2025-11-07T10:00:00.000Z"
+                        },
+                        {
+                          "booking_id": "987e6543-e21b-98d7-b654-789456123000",
+                          "start": "2025-11-08T09:00:00.000Z",
+                          "end": "2025-11-08T10:00:00.000Z",
+                          "is_recurring": true,
+                          "occurrence_start": "2025-11-08T09:00:00.000Z",
+                          "occurrence_end": "2025-11-08T10:00:00.000Z"
+                        }
+                      ],
+                      "next_available": [
+                        {
+                          "start": "2025-11-07T10:00:00.000Z",
+                          "end": "2025-11-07T11:00:00.000Z"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/availability": {
+      "get": {
+        "summary": "Get available time slots for a resource",
+        "description": "Computes available time slots for a resource within a specified time window, considering existing bookings (single and recurring)",
+        "tags": ["Availability"],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "resource_id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "UUID of the resource to check availability for",
+            "example": "550e8400-e29b-41d4-a716-446655440001"
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Start of the time window (ISO 8601 format)",
+            "example": "2025-11-07T00:00:00.000Z"
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "End of the time window (ISO 8601 format)",
+            "example": "2025-11-08T00:00:00.000Z"
+          },
+          {
+            "in": "query",
+            "name": "slot",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Minimum slot duration in minutes",
+            "example": 30
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully computed available slots",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvailabilityResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Resource not found",
+                  "message": "Resource with ID 550e8400-e29b-41d4-a716-446655440001 does not exist"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error type"
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable error message"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Validation failed"
+          },
+          "message": {
+            "type": "string",
+            "example": "Invalid query parameters"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "TimeSlot": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Start time of the slot in ISO 8601 format",
+            "example": "2025-11-07T09:00:00.000Z"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time",
+            "description": "End time of the slot in ISO 8601 format",
+            "example": "2025-11-07T10:00:00.000Z"
+          },
+          "duration_minutes": {
+            "type": "integer",
+            "description": "Duration of the slot in minutes",
+            "example": 60
+          }
+        },
+        "required": ["start", "end", "duration_minutes"]
+      },
+      "AvailabilityResponse": {
+        "type": "object",
+        "properties": {
+          "resource_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of the resource",
+            "example": "550e8400-e29b-41d4-a716-446655440001"
+          },
+          "resource_name": {
+            "type": "string",
+            "description": "Name of the resource",
+            "example": "Conference Room A"
+          },
+          "from": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Start of the query window",
+            "example": "2025-11-07T00:00:00.000Z"
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time",
+            "description": "End of the query window",
+            "example": "2025-11-08T00:00:00.000Z"
+          },
+          "slot_duration_minutes": {
+            "type": "integer",
+            "description": "Minimum slot duration in minutes",
+            "example": 30
+          },
+          "available_slots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeSlot"
+            }
+          },
+          "busy_slots_count": {
+            "type": "integer",
+            "description": "Number of busy time slots found",
+            "example": 5
+          }
+        }
+      },
+      "Exception": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "Date to exclude or modify (YYYY-MM-DD)",
+            "example": "2025-11-15"
+          },
+          "replace_start": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Optional replacement start time",
+            "example": "2025-11-15T14:00:00.000Z"
+          },
+          "replace_end": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Optional replacement end time",
+            "example": "2025-11-15T15:00:00.000Z"
+          }
+        },
+        "required": ["date"]
+      },
+      "BookingRequest": {
+        "type": "object",
+        "properties": {
+          "resource_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of the resource to book",
+            "example": "550e8400-e29b-41d4-a716-446655440001"
+          },
+          "start_time": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Start time of the booking in ISO 8601 format",
+            "example": "2025-11-07T09:00:00.000Z"
+          },
+          "end_time": {
+            "type": "string",
+            "format": "date-time",
+            "description": "End time of the booking in ISO 8601 format",
+            "example": "2025-11-07T10:00:00.000Z"
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Optional metadata (JSON object)",
+            "example": {
+              "title": "Team Standup",
+              "attendees": 5
+            }
+          },
+          "recurrence_rule": {
+            "type": "string",
+            "description": "Optional RFC 5545 RRULE string for recurring bookings",
+            "example": "FREQ=DAILY;COUNT=5"
+          },
+          "exceptions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Exception"
+            },
+            "description": "Optional array of exceptions for recurring bookings"
+          }
+        },
+        "required": ["resource_id", "start_time", "end_time"]
+      },
+      "Booking": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of the booking",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "resource_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of the resource",
+            "example": "550e8400-e29b-41d4-a716-446655440001"
+          },
+          "start_time": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Start time of the booking",
+            "example": "2025-11-07T09:00:00.000Z"
+          },
+          "end_time": {
+            "type": "string",
+            "format": "date-time",
+            "description": "End time of the booking",
+            "example": "2025-11-07T10:00:00.000Z"
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Metadata associated with the booking"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the booking was created",
+            "example": "2025-11-07T08:00:00.000Z"
+          },
+          "is_recurring": {
+            "type": "boolean",
+            "description": "Whether this is a recurring booking",
+            "example": false
+          },
+          "recurrence_rule": {
+            "type": "string",
+            "nullable": true,
+            "description": "RRULE string if recurring, null for single bookings",
+            "example": "FREQ=DAILY;COUNT=5"
+          },
+          "exceptions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Exception"
+            },
+            "description": "Array of exceptions (empty for single bookings)"
+          }
+        }
+      },
+      "BookingSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "success"
+          },
+          "booking": {
+            "$ref": "#/components/schemas/Booking"
+          }
+        }
+      },
+      "ConflictResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "conflict"
+          },
+          "message": {
+            "type": "string",
+            "example": "The requested time slot conflicts with existing bookings"
+          },
+          "conflicts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "booking_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "ID of the conflicting booking"
+                },
+                "start": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "Start time of the conflicting booking"
+                },
+                "end": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "End time of the conflicting booking"
+                },
+                "is_recurring": {
+                  "type": "boolean",
+                  "description": "Whether the conflicting booking is recurring"
+                },
+                "occurrence_start": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "Start time of the occurrence (only for recurring bookings)"
+                },
+                "occurrence_end": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "End time of the occurrence (only for recurring bookings)"
+                }
+              }
+            }
+          },
+          "next_available": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "start": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "Start time of available slot"
+                },
+                "end": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "End time of available slot"
+                }
+              }
+            },
+            "description": "Suggested alternative time slots"
+          }
+        }
+      }
+    }
+  }
+}
